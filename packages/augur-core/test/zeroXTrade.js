@@ -84,6 +84,8 @@ async function run() {
 
   await cash.faucet(fillerCost).send({ from: otherAccount })
   await cash.approve(addresses.Augur, "0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe").send({ from: otherAccount })
+  await cash.approve(addresses.CreateOrder, "0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe").send({ from: otherAccount })
+  await cash.approve(addresses.FillOrder, "0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe").send({ from: otherAccount })
 
   const fromBalance = await cash.balanceOf(from).call();
   const otherBalance = await cash.balanceOf(otherAccount).call();
