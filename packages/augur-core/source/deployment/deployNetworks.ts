@@ -22,7 +22,6 @@ export async function deployToNetworks(networks: Array<NETWORKS>) {
 }
 
 if (require.main === module) {
-    console.log('process.argv', process.argv)
     const networks = process.argv.slice(2).filter(isNetwork);
     deployToNetworks(networks).then(() => {
         console.log("Deployment to all networks succeeded");
