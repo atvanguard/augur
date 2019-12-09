@@ -136,7 +136,8 @@ contract ZeroXTrade is Initializable, IZeroXTrade, IERC1155 {
     }
 
     function bidBalance(address _owner, IMarket _market, uint8 _outcome, uint256 _price) public view returns (uint256) {
-        (,uint256 _numberOfOutcomes,) = registry.childToRootMarket(address(_market));
+        // (,uint256 _numberOfOutcomes,) = registry.childToRootMarket(address(_market));
+        uint256 _numberOfOutcomes = _market.getNumberOfOutcomes();
         // Figure out how many almost-complete-sets (just missing `outcome` share) the creator has
         uint256[] memory _shortOutcomes = new uint256[](_numberOfOutcomes - 1);
         uint256 _indexOutcome = 0;
@@ -156,9 +157,9 @@ contract ZeroXTrade is Initializable, IZeroXTrade, IERC1155 {
     }
 
     function askBalance(address _owner, IMarket _market, uint8 _outcome, uint256 _price) public view returns (uint256) {
-        (,,uint256 _numTicks) = registry.childToRootMarket(address(_market));
+        // (,,uint256 _numTicks) = registry.childToRootMarket(address(_market));
         uint256 _attoSharesOwned = shareToken.balanceOfMarketOutcome(_market, _outcome, _owner);
-        uint256 _attoSharesPurchasable = cash.balanceOf(_owner).div(_numTicks.sub(_price));
+        uint256 _attoSharesPurchasable = cash.balanceOf(_owner).div(_market.getNumTicks().sub(_price));
 
         return _attoSharesOwned.add(_attoSharesPurchasable);
     }
@@ -222,7 +223,7 @@ contract ZeroXTrade is Initializable, IZeroXTrade, IERC1155 {
             IExchange _maticExchange = getExchangeFromAssetData(_order.makerAssetData);
             // Update 0x and pay protocol fee. This will also validate signatures and order state for us.
             IExchange.FillResults memory totalFillResults = IExchange(registry.zeroXExchange(address(_maticExchange)))
-            .fillOrderNoThrow.value(150000 * tx.gasprice)(
+            .fillOrderInternal.value(150000 * tx.gasprice)(
                 _order,
                 _fillAmountRemaining,
                 _signatures[i],
@@ -230,6 +231,7 @@ contract ZeroXTrade is Initializable, IZeroXTrade, IERC1155 {
             );
 
             if (totalFillResults.takerAssetFilledAmount == 0) {
+                emit debug(5);
                 continue;
             }
 
@@ -260,6 +262,7 @@ contract ZeroXTrade is Initializable, IZeroXTrade, IERC1155 {
         cash = ICash(_cash);
     }
 
+    event debug(uint256 indexed a);
     function doTrade(IExchange.Order memory _order, uint256 _amount, address _affiliateAddress, bytes32 _tradeGroupId, address _taker, bytes memory _extraData) private returns (uint256) {
         // parseOrderData will validate that the token being traded is the legitimate one for the market
         AugurOrderData memory _augurOrderData = parseOrderData(_order);
@@ -268,19 +271,26 @@ contract ZeroXTrade is Initializable, IZeroXTrade, IERC1155 {
         // If the signed order creator doesnt have enough funds we still want to continue and take their order out of the list
         // If the filler doesn't have funds this will just fail, which is fine
         if (!creatorHasFundsForTrade(_order, _amount)) {
+            emit debug(1);
             return 0;
         }
         // If the maker is also the taker we also just skip the trade
         if (_order.makerAddress == _taker) {
+            emit debug(2);
             return 0;
         }
         (_augurOrderData.marketAddress,,) = registry.childToRootMarket(_augurOrderData.marketAddress);
+        emit debug(3);
         fillOrder.fillZeroXOrder(IMarket(_augurOrderData.marketAddress), _augurOrderData.outcome, IERC20(_augurOrderData.kycToken), _augurOrderData.price, Order.Types(_augurOrderData.orderType), _amount, _order.makerAddress, _tradeGroupId, _taker, _extraData);
+        emit debug(4);
         return _amount;
     }
 
     function creatorHasFundsForTrade(IExchange.Order memory _order, uint256 _amount) public view returns (bool) {
         uint256 _tokenId = getTokenIdFromOrder(_order);
+        (address _market, uint256 _price, uint8 _outcome, uint8 _type) = unpackTokenId(_tokenId);
+        (address _rootmarket,,) = registry.childToRootMarket(_market);
+        _tokenId = getTokenId(_rootmarket, _price, _outcome, _type);
         return _amount <= this.balanceOf(_order.makerAddress, _tokenId);
     }
 

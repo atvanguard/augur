@@ -123,7 +123,8 @@ contract AugurPredicate is Initializable {
             lookupExit[exitId].shareToken != address(0x0),
             "Predicate.trade: Please call initializeForExit first"
         );
-        IShareToken(lookupExit[exitId].shareToken).mint(to, market, outcome, balance);
+        (address _rootMarket,,) = registry.childToRootMarket(market);
+        IShareToken(lookupExit[exitId].shareToken).mint(to, _rootMarket, outcome, balance);
     }
 
     /**
@@ -152,6 +153,8 @@ contract AugurPredicate is Initializable {
             lookupExit[exitId].shareToken != address(0x0),
             "Predicate.trade: Please call initializeForExit first"
         );
+
+        Cash(lookupExit[exitId].cash).setIsExecuting(true);
         zeroXTrade.trade.value(msg.value)(
             _requestedFillAmount,
             _affiliateAddress,
@@ -159,6 +162,7 @@ contract AugurPredicate is Initializable {
             _taker,
             abi.encode(lookupExit[exitId].shareToken, lookupExit[exitId].cash)
         );
+        Cash(lookupExit[exitId].cash).setIsExecuting(false);
         // The trade is valid, @todo start an exit
     }
 

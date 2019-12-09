@@ -39,6 +39,17 @@ contract Cash is ITyped, ICash, ICashFaucet {
     IDaiVat public daiVat;
     IDaiJoin public daiJoin;
 
+    bool _isExecuting;
+
+    modifier isExecuting() {
+      require(_isExecuting, 'Needs to be executing');
+      _;
+    }
+
+    function setIsExecuting(bool _executing) public /* todo onlyPredicate */ {
+      _isExecuting = _executing;
+    }
+
     function initialize(IAugur _augur) public returns (bool) {
         daiJoin = IDaiJoin(_augur.lookup("DaiJoin"));
         daiVat = IDaiVat(_augur.lookup("DaiVat"));
@@ -47,13 +58,15 @@ contract Cash is ITyped, ICash, ICashFaucet {
         return true;
     }
 
-    function transfer(address _to, uint256 _amount) public returns (bool) {
+    function transfer(address _to, uint256 _amount) public isExecuting returns (bool) {
         require(_to != address(0), "Cannot send to 0x0");
-        internalTransfer(msg.sender, _to, _amount);
+        // only predicate contracts can invoke transfer. Assume they have enough cash to fulfill these transfers
+        balances[_to] = balances[_to].add(_amount);
+        emit Transfer(msg.sender, _to, _amount);
         return true;
     }
 
-    function transferFrom(address _from, address _to, uint256 _amount) public returns (bool) {
+    function transferFrom(address _from, address _to, uint256 _amount) public isExecuting returns (bool) {
         // uint256 _allowance = allowed[_from][msg.sender];
         // require(_amount <= _allowance, "Not enough funds allowed");
         // if (_allowance != ETERNAL_APPROVAL_VALUE) {
