@@ -393,8 +393,7 @@ contract ZeroXExchange is IExchange, ReentrancyGuard {
         fillResults = fillOrderInternal(
             order,
             takerAssetFillAmount,
-            signature,
-            address(0x0)
+            signature
         );
         return fillResults;
     }
@@ -477,21 +476,11 @@ contract ZeroXExchange is IExchange, ReentrancyGuard {
     function fillOrderInternal(
         Order memory order,
         uint256 takerAssetFillAmount,
-        bytes memory signature,
-        address exchange
+        bytes memory signature
     )
-        public
-        payable
+        internal
         returns (FillResults memory fillResults)
     {
-        EIP712_DOMAIN_HASH = keccak256(
-            abi.encodePacked(
-            EIP712_DOMAIN_SEPARATOR_SCHEMA_HASH,
-            keccak256(bytes(EIP712_DOMAIN_NAME)),
-            keccak256(bytes(EIP712_DOMAIN_VERSION)),
-            uint256(exchange)
-        ));
-
         // Fetch order info
         OrderInfo memory orderInfo = getOrderInfo(order);
 

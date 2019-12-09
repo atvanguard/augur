@@ -54,13 +54,4 @@ contract IExchange {
     /// @param signature Proof that order has been created by maker.
     /// @return Amounts filled and fees paid by maker and taker.
     function fillOrderNoThrow(Order memory order, uint256 takerAssetFillAmount, bytes memory signature, address exchange) public payable returns (FillResults memory fillResults);
-    function fillOrderInternal(
-        Order memory order,
-        uint256 takerAssetFillAmount,
-        bytes memory signature,
-        address exchange
-    )
-        public
-        payable
-        returns (FillResults memory fillResults);
 }

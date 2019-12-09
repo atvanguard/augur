@@ -88,18 +88,17 @@ library Trade {
     // Constructor
     //
 
-    function create(StoredContracts memory _storedContracts, bytes32 _orderId, address _fillerAddress, uint256 _fillerSize, address _affiliateAddress) internal /* view */ returns (Data memory) {
+    function create(StoredContracts memory _storedContracts, bytes32 _orderId, address _fillerAddress, uint256 _fillerSize, address _affiliateAddress) internal view returns (Data memory) {
         OrderData memory _orderData = createOrderDataWithOrderId(_storedContracts, _orderId);
 
         return createWithData(_storedContracts, _orderData, _fillerAddress, _fillerSize, _affiliateAddress);
     }
 
-    function createWithData(StoredContracts memory _storedContracts, OrderData memory _orderData, address _fillerAddress, uint256 _fillerSize, address _affiliateAddress) internal /* view */ returns (Data memory) {
+    function createWithData(StoredContracts memory _storedContracts, OrderData memory _orderData, address _fillerAddress, uint256 _fillerSize, address _affiliateAddress) internal view returns (Data memory) {
         Contracts memory _contracts = getContracts(_storedContracts, _orderData.market, _orderData.outcome);
         FilledOrder memory _order = getOrder(_contracts, _orderData.outcome, _orderData.kycToken, _orderData.price, _orderData.orderId);
         Participant memory _creator = getMaker(_orderData.sharesEscrowed, _orderData.amount, _orderData.creator, _orderData.orderType);
         uint256[] memory _shortOutcomes = getShortOutcomes(_contracts.market, _orderData.outcome);
-        // emit YOYO2(800, _shortOutcomes[0]);
         Participant memory _filler = getFiller(_contracts, _orderData.outcome, _shortOutcomes, _orderData.orderType, _fillerAddress, _fillerSize);
 
         // Signed orders which have no order id get their funds from the signed order "creator" whereas on chain orders have funds escrowed in Augur Trading.
@@ -134,7 +133,7 @@ library Trade {
         });
     }
 
-    function createOrderData(IShareToken _shareToken, IMarket _market, uint256 _outcome, IERC20 _kycToken, uint256 _price, Order.Types _orderType, uint256 _amount, address _creator) internal /* view */ returns (OrderData memory) {
+    function createOrderData(IShareToken _shareToken, IMarket _market, uint256 _outcome, IERC20 _kycToken, uint256 _price, Order.Types _orderType, uint256 _amount, address _creator) internal view returns (OrderData memory) {
         uint256 _sharesAvailable = getSharesAvailable(_shareToken, _market, _orderType, _outcome, _amount, _creator);
 
         return OrderData({
@@ -150,7 +149,7 @@ library Trade {
         });
     }
 
-    function getSharesAvailable(IShareToken _shareToken, IMarket _market, Order.Types _orderType, uint256 _outcome, uint256 _amount, address _creator) private /* view */ returns (uint256) {
+    function getSharesAvailable(IShareToken _shareToken, IMarket _market, Order.Types _orderType, uint256 _outcome, uint256 _amount, address _creator) private view returns (uint256) {
         // Figure out how many almost-complete-sets (just missing `outcome` share) the creator has
         uint256 _numberOfOutcomes = _market.getNumberOfOutcomes();
         if (_orderType == Order.Types.Bid) {
@@ -159,9 +158,8 @@ library Trade {
         return _shareToken.balanceOfMarketOutcome(_market, _outcome, _creator).min(_amount);
     }
 
-    function getShortOutcomes(IMarket _market, uint256 _outcome) private /* view */ returns (uint256[] memory) {
+    function getShortOutcomes(IMarket _market, uint256 _outcome) private view returns (uint256[] memory) {
         uint256 _numberOfOutcomes = _market.getNumberOfOutcomes();
-        emit YOYO2(_numberOfOutcomes, _outcome);
         uint256[] memory _shortOutcomes = new uint256[](_numberOfOutcomes - 1);
         uint256 _indexOutcome = 0;
         for (uint256 _i = 0; _i < _numberOfOutcomes - 1; _i++) {
@@ -178,21 +176,15 @@ library Trade {
     // "public" functions
     //
 
-    event YOYO(uint256 indexed a);
-    event YOYO2(uint256 indexed a, uint256 indexed b);
     function tradeMakerSharesForFillerShares(Data memory _data) internal returns (uint256, uint256) {
-    //   emit YOYO2(_data.creator.sharesToSell, _data.filler.sharesToSell);
         uint256 _numberOfCompleteSets = _data.creator.sharesToSell.min(_data.filler.sharesToSell);
         if (_numberOfCompleteSets == 0) {
-            // emit YOYO(500);
             return (0, 0);
         }
-        // emit YOYO(600);
 
         // transfer shares and sell complete sets distributing payouts based on the price
         uint256 _marketCreatorFees;
         uint256 _reporterFees;
-
         // Sell both account shares
         (_marketCreatorFees, _reporterFees) = _data.contracts.shareToken.sellCompleteSetsForTrade(_data.contracts.market, _data.longOutcome, _numberOfCompleteSets, _data.shortFundsAccount, _data.longFundsAccount, getShortShareSellerDestination(_data), getLongShareSellerDestination(_data), _data.order.sharePriceLong, _data.affiliateAddress);
 
@@ -405,7 +397,7 @@ library Trade {
         });
     }
 
-    function getFiller(Contracts memory _contracts, uint256 _longOutcome, uint256[] memory _shortOutcomes, Order.Types _orderOrderType, address _address, uint256 _size) private /* view */ returns (Participant memory) {
+    function getFiller(Contracts memory _contracts, uint256 _longOutcome, uint256[] memory _shortOutcomes, Order.Types _orderOrderType, address _address, uint256 _size) private view returns (Participant memory) {
         Direction _direction = (_orderOrderType == Order.Types.Bid) ? Direction.Short : Direction.Long;
         uint256 _sharesToSell = 0;
         _sharesToSell = getFillerSharesToSell(_contracts, _longOutcome, _shortOutcomes, _address, _direction, _size);
@@ -430,25 +422,10 @@ library Trade {
         return (_numTicks, _price, _sharePriceShort);
     }
 
-    event YOYO3(address indexed market);
-    function getFillerSharesToSell(Contracts memory _contracts, uint256 _longOutcome, uint256[] memory _shortOutcomes, address _filler, Direction _fillerDirection, uint256 _fillerSize) private /* view */ returns (uint256) {
-      emit YOYO2(
-        _contracts.shareToken.balanceOfMarketOutcome(_contracts.market, _longOutcome, _filler),
-        _fillerSize
-      );
-      emit YOYO2(
-        _contracts.shareToken.balanceOfMarketOutcome(_contracts.market, _shortOutcomes[0], _filler),
-        _fillerSize
-      );
-      emit YOYO2(800, _shortOutcomes.length);
-      emit YOYO2(900, _shortOutcomes[0]);
-      emit YOYO3(address(_contracts.market));
-      emit YOYO3(_filler);
+    function getFillerSharesToSell(Contracts memory _contracts, uint256 _longOutcome, uint256[] memory _shortOutcomes, address _filler, Direction _fillerDirection, uint256 _fillerSize) private view returns (uint256) {
         if (_fillerDirection == Direction.Short) {
-          emit YOYO2(1000, 1000);
             return _contracts.shareToken.balanceOfMarketOutcome(_contracts.market, _longOutcome, _filler).min(_fillerSize);
         }
-        emit YOYO2(1001, 1001);
         return _contracts.shareToken.lowestBalanceOfMarketOutcomes(_contracts.market, _shortOutcomes, _filler).min(_fillerSize);
     }
 }
@@ -535,9 +512,8 @@ contract FillOrder is Initializable, ReentrancyGuard, IFillOrder {
 
         (_marketCreatorFees, _reporterFees) = _tradeData.tradeMakerSharesForFillerShares();
         _tradeData.tradeMakerTokensForFillerShares();
-        _tradeData.tradeMakerSharesForFillerTokens(); // shoudl have a certain balance by now
+        _tradeData.tradeMakerSharesForFillerTokens();
         uint256 _tokensRefunded = _tradeData.tradeMakerTokensForFillerTokens();
-        // return 0;
 
         sellCompleteSets(_tradeData);
 
